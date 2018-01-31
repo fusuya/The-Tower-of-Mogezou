@@ -287,7 +287,7 @@
 		 (monster-str-damage m) 0)));;与えたダメージリセット
 
 ;;モンスター選択 カーソル選択ver bc-cursor= battle command cursor
-(defun pick-monster2 (pt p cursor bc-cursor)
+(defun pick-monster2 (pt p cursor bc-cursor &optional (cancellable t))
   (let ((atk-list (cond ((= 0 (player-type p)) *attack*)
 			((= 1 (player-type p)) *orc-atk*)
 			((= 2 (player-type p)) *slime-atk*)
@@ -300,58 +300,24 @@
   (case (read-command-char)
     (z (aref *monsters* cursor)) ;;cursor位置のモンスターを返す
     (x ;;キャンセル
-     nil)
+     (if cancellable
+         nil
+         (pick-monster2 pt p cursor bc-cursor nil)))
     (w ;;↑
-     (cond
-       ((> cursor 0)
-	 (let ((alive-num (mae-monster-alive? (1- cursor))))
-	   (if alive-num
-	       (pick-monster2 pt p alive-num bc-cursor)
-	       (pick-monster2 pt p cursor bc-cursor)))
-	 (pick-monster2 pt p cursor bc-cursor))))
+     (let ((alive-num (mae-monster-alive? (1- cursor))))
+       (if alive-num
+           (pick-monster2 pt p alive-num bc-cursor)
+           (pick-monster2 pt p cursor bc-cursor))))
     (s ;;下
-     (if (> (party-monster-num pt) cursor)
-	 (let ((alive-num (ato-monster-alive? (1+ cursor) pt)))
-	   (if alive-num
-	       (pick-monster2 pt p alive-num bc-cursor)
-	       (pick-monster2 pt p cursor bc-cursor)))
-	 (pick-monster2 pt p cursor bc-cursor)))
+     (let ((alive-num (ato-monster-alive? (1+ cursor) pt)))
+       (if alive-num
+           (pick-monster2 pt p alive-num bc-cursor)
+           (pick-monster2 pt p cursor bc-cursor))))
     (otherwise
      (pick-monster2 pt p cursor bc-cursor))))
 ;;ダブルスウィング２回目用　キャンセルなしピックモンスター
-;; pick-monster2とほぼ一緒なんかうまくまとめられないか
 (defun pick-monster3 (pt p cursor bc-cursor)
-  (let ((atk-list (cond ((= 0 (player-type p)) *attack*)
-			((= 1 (player-type p)) *orc-atk*)
-			((= 2 (player-type p)) *slime-atk*)
-			((= 3 (player-type p)) *hydra-atk*)
-			((= 4 (player-type p)) *brigand-atk*))))
-    (gamen-clear)
-    (show-player-status pt)
-    (show-pick-monsters cursor t)
-    (show-command-k pt p bc-cursor atk-list))
-  (case (read-command-char)
-    (z (aref *monsters* cursor)) ;;cursor位置のモンスターを返す
-    (w ;;↑
-     (if (> cursor 0)
-	 (let ((alive-num (mae-monster-alive? (1- cursor))))
-	   (if alive-num
-	       (pick-monster3 pt p alive-num bc-cursor)
-	       (pick-monster3 pt p cursor bc-cursor)))
-	 (pick-monster3 pt p cursor bc-cursor)))
-    (s ;;下
-     (if (> (party-monster-num pt) cursor)
-	 (let ((alive-num (ato-monster-alive? (1+ cursor) pt)))
-	   (if alive-num
-	       (pick-monster3 pt p alive-num bc-cursor)
-	       (pick-monster3 pt p cursor bc-cursor)))
-	 (pick-monster3 pt p cursor bc-cursor)))
-    (otherwise
-     (pick-monster3 pt p cursor bc-cursor))))
-
-
-
-
+  (pick-monster2 pt p cursor bc-cursor nil))
 
 ;;---------------------攻撃方法---------------------------------------------------
 ;;突く
