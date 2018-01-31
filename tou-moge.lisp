@@ -1,6 +1,7 @@
 (load "item.lisp" :external-format :utf-8)
 (load "komono.lisp")
 (load "define.lisp" :external-format :utf-8)
+(load "player.lisp")
 (load "make-monster.lisp" :external-format :utf-8)
 
 (load "maze-test.lisp" :external-format :utf-8)
@@ -288,11 +289,7 @@
 
 ;;モンスター選択 カーソル選択ver bc-cursor= battle command cursor
 (defun pick-monster2 (pt p cursor bc-cursor &optional (cancellable t))
-  (let ((atk-list (cond ((= 0 (player-type p)) *attack*)
-			((= 1 (player-type p)) *orc-atk*)
-			((= 2 (player-type p)) *slime-atk*)
-			((= 3 (player-type p)) *hydra-atk*)
-			((= 4 (player-type p)) *brigand-atk*))))
+  (let ((atk-list (player-command-list p)))
     (gamen-clear)
     (show-player-status pt)
     (show-pick-monsters cursor t)
@@ -465,11 +462,7 @@
 
 ;;攻撃方法カーソル選択 type 0:主人公 1:オーク 2:スライム 3:ヒドラ 4:ブリガンド 5:メタルヨテイチ
 (defun player-attack3 (pt p bc-cursor)
-  (let* ((atk-list (cond ((= 0 (player-type p)) *attack*)
-			((= 1 (player-type p)) *orc-atk*)
-			((= 2 (player-type p)) *slime-atk*)
-			((= 3 (player-type p)) *hydra-atk*)
-			((= 4 (player-type p)) *brigand-atk*)))
+  (let* ((atk-list (player-command-list p))
 	 (command-len (1- (length atk-list))))
     (gamen-clear)
     (show-player-status pt)
@@ -477,41 +470,24 @@
     (show-command-k pt p bc-cursor atk-list)
     (case (read-command-char)
       (z ;;決定
-       (case bc-cursor
-	 (0
-	  (let ((dmg (cond ((= 0 (player-type p)) (stab-dmg pt p bc-cursor))
-			   ((= 1 (player-type p)) (orc-naguru pt p bc-cursor))
-			   ((= 2 (player-type p)) (slime-binta pt p bc-cursor))
-			   ((= 3 (player-type p)) (hydra-eat pt p bc-cursor))
-			   ((= 4 (player-type p)) (brigand-tataku pt p bc-cursor)))))
-	    (if (null dmg)
-		(player-attack3 pt p bc-cursor)))) ;;pickmonsterがキャンセルされた場合
-	 (1 
-	  (let ((dmg (cond ((= 0 (player-type p)) (d-atk pt p bc-cursor))
-			   ((= 1 (player-type p)) (orc-bun-naguru pt p bc-cursor))
-			   ((= 2 (player-type p)) (slime-betobeto p))
-			   ((= 3 (player-type p)) (hydra-aba pt p))
-			   ((= 4 (player-type p)) (brigand-muchi pt p bc-cursor)))))
-	    (if (null dmg)
-		(player-attack3 pt p bc-cursor))))
-	 (2
-	  (cond ((= 0 (player-type p)) (swing pt p))
-		((= 1 (player-type p)) nil)
-		((= 2 (player-type p)) nil)
-		((= 3 (player-type p)) nil)
-		((= 4 (player-type p)) nil)))
-	 (3
-	  (cond ((= 0 (player-type p)) nil)
-		((= 1 (player-type p)) (select-heal pt 0))
-		((= 2 (player-type p)) (select-heal pt 0))
-		((= 3 (player-type p)) (select-heal pt 0))
-		((= 4 (player-type p)) (select-heal pt 0))))
-	 (4 ;;回復
-	  (cond ((= 0 (player-type p)) (select-heal pt 0))
-		((= 1 (player-type p)) nil)
-		((= 2 (player-type p)) nil)
-		((= 3 (player-type p)) nil)
-		((= 4 (player-type p)) nil)))))
+       (let ((cmd (nth bc-cursor atk-list)))
+         (cond
+           ((equal cmd "待機") nil)
+           ((equal cmd "回復薬") (select-heal pt 0))
+           (t
+            (if (not (cond ((equal cmd "突く") (stab-dmg pt p bc-cursor))
+                           ((equal cmd "殴る") (orc-naguru pt p bc-cursor))
+                           ((equal cmd "ビンタ") (slime-binta pt p bc-cursor))
+                           ((equal cmd "かじる") (hydra-eat pt p bc-cursor))
+                           ((equal cmd "叩く") (brigand-tataku pt p bc-cursor))
+                           ((equal cmd "ダブルスウィング") (d-atk pt p bc-cursor))
+                           ((equal cmd "ぶん殴る") (orc-bun-naguru pt p bc-cursor))
+                           ((equal cmd "ベトベト液") (slime-betobeto p))
+                           ((equal cmd "暴れる") (hydra-aba pt p))
+                           ((equal cmd "鞭アタック") (brigand-muchi pt p bc-cursor))
+                           ((equal cmd "薙ぎ払う") (swing pt p))
+                           (t (error (format nil "unknown command ~a" cmd)))))
+                (player-attack3 pt p bc-cursor)))))) ;;pickmonsterがキャンセルされた場合
       (w ;;↑
        (cond
 	 ((= bc-cursor 0) ;;カーソルが家一番上にあったら一番下へ
@@ -630,11 +606,7 @@
 
 ;;仲間にするか？
 (defun nakama-in? (pt p cursor)
-  (let ((mon-type (cond ((= (player-type p) 1) "オーク")
-			((= (player-type p) 2) "スライム")
-			((= (player-type p) 3) "ヒドラ")
-			((= (player-type p) 4) "ブリガンド")
-			((= (player-type p) 5) "メタルヨテイチ")))
+  (let ((mon-type (player-type-name p))
 	(name-len (string-width (player-name p))))
     (gamen-clear)
     (scr-format "~%~%~aが起き上がり仲間になりたそうにこちらを見ている。~%~%" mon-type)
