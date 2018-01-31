@@ -153,7 +153,7 @@
 
 (defmethod monster-hit2 (pt (p player) (m yote1) x)
   (decf (monster-health m))
-  (setf (monster-damage m) (format nil "1 のダメージを与えた！"))
+  (incf (monster-damage m))
   (if (monster-dead m)
       (progn (incf (player-exp p) 100)
 	     (nakama? pt *yote1-name* 5)
