@@ -660,7 +660,7 @@
 	 ((> cursor 0)
 	  (nakama-in? pt p (1- cursor)))
 	 ((= cursor 0)
-	  (nakama-in? pt p (1- (length (party-players pt)))))))
+	  (nakama-in? pt p 1))))
       (s ;;↓
        (cond
 	 ((> 1 cursor)
