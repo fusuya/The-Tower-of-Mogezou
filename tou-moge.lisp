@@ -886,7 +886,7 @@
     ;;(setf name (read-line))
     (init-charms)
     (let* ((p (make-player :name name))
-           (p2 (make-player :name "にゃんちゅう" :type 4 :agi 33))
+           (p2 (make-player :name "にゃんちゅう" :type 4 :agi 33 :maxagi 33))
 	   (p3 (make-player :name "カツオ" :type 2))
 	   (p4 (make-player :name "あんぱん" :type 3))
            (pt (make-party :players (list p p2 p3 p4)))
