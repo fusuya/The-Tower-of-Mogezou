@@ -199,11 +199,23 @@
 (defun players-dead (pt)
   (every #'player-dead (party-players pt)))
 
+;;死んだ味方がいたらパーティから離脱させる
+(defun player-death? (pt)
+  (dolist (p (party-players pt))
+    (if (player-dead p)
+	(setf (party-players pt)
+	      (remove p (party-players pt) :test #'equalp)))))
+
+;;味方死んだ時のメッセージ
+(defun player-dead-message (p)
+  (if (player-dead p)
+      (scr-format "~a は死んでしまった！~%" (player-name p))))
+	     
 
 ;;cursorより前に生きてるモンスターおるか？
 (defun mae-monster-alive? (cursor)
   (if (> 0 cursor)
-      nil
+      (mae-monster-alive? (1- (length *monsters*)))
       (if (monster-dead (aref *monsters* cursor))
 	  (mae-monster-alive? (1- cursor))
 	  cursor))) ;;生きてるモンスターの番号を返す
@@ -211,7 +223,7 @@
 ;;cursorより後ろに生きてるモンスターおるか？
 (defun ato-monster-alive? (cursor pt)
   (if (>= cursor (party-monster-num pt))
-      nil
+      (ato-monster-alive? 0 pt)
       (if (monster-dead (aref *monsters* cursor))
 	  (ato-monster-alive? (1+ cursor) pt)
 	  cursor)))
@@ -302,163 +314,19 @@
          (pick-monster2 pt p cursor bc-cursor nil)))
     (w ;;↑
      (let ((alive-num (mae-monster-alive? (1- cursor))))
-       (if alive-num
-           (pick-monster2 pt p alive-num bc-cursor)
-           (pick-monster2 pt p cursor bc-cursor))))
+       (pick-monster2 pt p alive-num bc-cursor)))
     (s ;;下
      (let ((alive-num (ato-monster-alive? (1+ cursor) pt)))
-       (if alive-num
-           (pick-monster2 pt p alive-num bc-cursor)
-           (pick-monster2 pt p cursor bc-cursor))))
+       (pick-monster2 pt p alive-num bc-cursor)))
     (otherwise
      (pick-monster2 pt p cursor bc-cursor))))
 ;;ダブルスウィング２回目用　キャンセルなしピックモンスター
 (defun pick-monster3 (pt p cursor bc-cursor)
   (pick-monster2 pt p cursor bc-cursor nil))
 
-;;---------------------攻撃方法---------------------------------------------------
-;;突く
-(defun stab-dmg (pt p bc-cursor)
-  (let ((m (pick-monster2 pt p (ato-monster-alive? 0 pt) bc-cursor)))
-    (if m
-	(progn (monster-hit2 pt p m (+ 2 (randval (ash (player-str p) -1))))
-	       t)
-	nil)))
 
-;;ダブルアタック
-(defun d-atk (pt p bc-cursor)
-  (let ((m (pick-monster2 pt p (ato-monster-alive? 0 pt) bc-cursor)))
-    (if (null m)
-        nil
-	(let ((x (randval (truncate (/ (player-str p) 6)))))
-	  (monster-hit2 pt p m x) ;;選ばれたモンスターにダメージ与える
-	  (unless (monsters-dead) ;;生き残ってるモンスターがいるなら２回目の攻撃
-	    ;;キャンセルなしピックモンスター
-	    (let ((m2 (pick-monster3 pt p (ato-monster-alive? 0 pt) bc-cursor)))
-	      (monster-hit2 pt p m2 x)))
-	  t))))
-
-;;なぎ払い
-(defun swing (pt p)
-  (dotimes (x (1+ (randval (truncate (/ (player-str p) 3)))))
-    (unless (monsters-dead)
-      (monster-hit2 pt p (random-monster) 1)))
-  t)
-
-;;オーク殴る
-(defun orc-naguru (pt p bc-cursor)
-  (let ((m (pick-monster2 pt p (ato-monster-alive? 0 pt) bc-cursor)))
-    (if m
-        (progn (monster-hit2 pt p m (randval (+ 2 (ash (player-str p) -1))))
-	       t)
-	nil)))
-
-;;オークぶん殴る 1/4の確率で大ダメージ
-(defun orc-bun-naguru (pt p bc-cursor)
-  (let ((m (pick-monster2 pt p (ato-monster-alive? 0 pt) bc-cursor)))
-    (if m
-        (let ((dmg (randval (player-str p))))
-	  (if (> (floor (* (player-str p) 3/4)) dmg)
-	      (setf dmg 1))
-	  (monster-hit2 pt p m dmg)
-	  t)
-	nil)))
-
-;;ヒドラ　かじる
-(defun hydra-eat (pt p bc-cursor)
-  (let ((m (pick-monster2 pt p (ato-monster-alive? 0 pt) bc-cursor)))
-    (if m
-        (let ((dmg (randval (+ (truncate (/ (player-str p) 4)) (truncate (/ (player-hp p) 4))))))
-	  (monster-hit2 pt p m dmg)
-	  t)
-	nil)))
-
-;;ヒドラ　暴れる　敵複数にダメージ
-(defun hydra-aba (pt p)
-  (dotimes (x (randval (truncate (/ (player-hp p) 6))))
-    (unless (monsters-dead)
-      (monster-hit2 pt p (random-monster) (randval (truncate (/ (player-str p) 6))))))
-  t)
-
-;;スライムビンタ
-(defun slime-binta (pt p bc-cursor)
-  (let ((m (pick-monster2 pt p (ato-monster-alive? 0 pt) bc-cursor)))
-    (if m
-        (let ((dmg (randval (ash (player-str p) -1))))
-	  (monster-hit2 pt p m dmg)
-	  t)
-	nil)))
-
-;;スライムベトベト液 敵全員のagiにダメージ
-(defun slime-betobeto (p)
-  (loop for m across *monsters* do
-    (if (null (monster-dead m))
-	(monster-agi-hit m (randval (truncate (/ (player-str p) 5))))))
-  t)
-
-;;ブリガンド叩く
-(defun brigand-tataku (pt p bc-cursor)
-  (let ((m (pick-monster2 pt p (ato-monster-alive? 0 pt) bc-cursor)))
-    (if m
-        (let ((dmg (1+ (randval (ash (player-str p) -1)))))
-	  (monster-hit2 pt p m dmg)
-	  t)
-	nil)))
-
-;;ブリガンド 鞭　敵の攻撃力(Lv)ダウン
-(defun brigand-muchi (pt p bc-cursor)
-  (let ((m (pick-monster2 pt p (ato-monster-alive? 0 pt) bc-cursor)))
-    (if m
-        (let ((dmg (randval (truncate (/ (player-str p) 10)))))
-	  (monster-str-hit m dmg)
-	  t)
-	nil)))
-;;-------------------------------------------------------------------------------
   
-;;薬を使う
-(defun use-heal (p)
-  (scr-format "~%「~aに回復薬を使った。」~%" (player-name p))
-  (setf (player-hp p)  (player-maxhp p)
-	(player-agi p) (player-maxagi p)
-	(player-str p) (player-maxstr p)))
-
-;;回復薬使う相手を選ぶ
-(defun select-heal (pt cursor)
-  (gamen-clear)
-  (show-player-status pt)
-  (scr-fresh-line)
-  (if (= (party-heal pt) 0)
-      (progn (scr-format "回復薬を持っていません！~%")
-	     (scr-format "次へ press any key")
-	     (read-command-char))
-      (progn
-	(scr-format "誰に回復薬を使いますか？(z:決定 x:キャンセル)~%~%")
-	(loop for p in (party-players pt)
-	      for i from 0 do
-		(if (= cursor i)
-		    (scr-format " ▶ ")
-		    (scr-format "   "))
-		(scr-format "~a~%" (player-name p)))
-	(case (read-command-char)
-	  (z
-	   (decf (party-heal pt))
-	   (use-heal (nth cursor (party-players pt))))
-	  (w ;;↑
-	   (cond
-	     ((> cursor 0)
-	      (select-heal pt (1- cursor)))
-	     ((= cursor 0)
-	      (select-heal pt (1- (length (party-players pt)))))))
-	  (s ;;↓
-	   (cond
-	     ((> (1- (length (party-players pt))) cursor)
-	      (select-heal pt (1+ cursor)))
-	     ((= cursor (1- (length (party-players pt))))
-	      (select-heal pt 0))))
-	  (x
-	   nil)
-	  (otherwise
-	   (select-heal pt cursor))))))
+;;---------------------------------------------------------------------------------------------
 
 ;;攻撃方法カーソル選択 type 0:主人公 1:オーク 2:スライム 3:ヒドラ 4:ブリガンド 5:メタルヨテイチ
 (defun player-attack3 (pt p bc-cursor)
@@ -473,20 +341,8 @@
        (let ((cmd (nth bc-cursor atk-list)))
          (cond
            ((equal cmd "待機") nil)
-           ((equal cmd "回復薬") (select-heal pt 0))
-           (t
-            (if (not (cond ((equal cmd "突く") (stab-dmg pt p bc-cursor))
-                           ((equal cmd "殴る") (orc-naguru pt p bc-cursor))
-                           ((equal cmd "ビンタ") (slime-binta pt p bc-cursor))
-                           ((equal cmd "かじる") (hydra-eat pt p bc-cursor))
-                           ((equal cmd "叩く") (brigand-tataku pt p bc-cursor))
-                           ((equal cmd "ダブルスウィング") (d-atk pt p bc-cursor))
-                           ((equal cmd "ぶん殴る") (orc-bun-naguru pt p bc-cursor))
-                           ((equal cmd "ベトベト液") (slime-betobeto p))
-                           ((equal cmd "暴れる") (hydra-aba pt p))
-                           ((equal cmd "鞭アタック") (brigand-muchi pt p bc-cursor))
-                           ((equal cmd "薙ぎ払う") (swing pt p))
-                           (t (error (format nil "unknown command ~a" cmd)))))
+           (t ;;コマンド名にあったコマンド関数を呼ぶ
+            (if (not (funcall (cdr (assoc cmd *kougeki* :test #'equal)) pt p bc-cursor))
                 (player-attack3 pt p bc-cursor)))))) ;;pickmonsterがキャンセルされた場合
       (w ;;↑
        (cond
@@ -655,14 +511,15 @@
     (let ((attack-jun (sort-agi (append (party-players pt)
                                         (coerce *monsters* 'list)))))
       (loop for p in attack-jun
-	    until (or (players-dead pt) (monsters-dead))
-	    do
-	(case (type-of p)
-	  (player
-	   (player-attack3 pt p 0))
-	  (otherwise
-	   (if (null (monster-dead p))
-	       (show-monster-atk pt p (party-players pt))))))
+	    until (or (players-dead pt) (monsters-dead)) do
+	      (player-death? pt) ;;死んだ味方がいたら外す
+	      (case (type-of p)
+		(player
+		 (if (null (player-dead p))
+		     (player-attack3 pt p 0)))
+		(otherwise
+		 (if (null (monster-dead p)) ;;生きてたら行動
+		     (show-monster-atk pt p (party-players pt))))))
       (game-loop pt))))
 
 ;;バトル開始
@@ -858,10 +715,10 @@
     ;;(setf name (read-line))
     (init-charms)
     (let* ((p (make-player :name name))
-           (p2 (make-player :name "にゃんちゅう" :type 4 :agi 33 :maxagi 33))
-	   (p3 (make-player :name "カツオ" :type 2))
-	   (p4 (make-player :name "あんぱん" :type 3))
-           (pt (make-party :players (list p p2 p3 p4)))
+           ;; (p2 (make-player :name "にゃんちゅう" :type 4 :agi 33 :maxagi 33 :hp 1))
+	   ;; (p3 (make-player :name "カツオ" :type 2 :hp 1))
+	   ;; (p4 (make-player :name "あんぱん" :type 3 :hp 1))
+           (pt (make-party :players (list p)))
            (map (make-donjon)))
       (init-data) ;;データ初期化
       (maze map pt) ;;マップ生成
