@@ -121,12 +121,14 @@
       (push (nth (random len) (donjon-path map)) (donjon-enemies map)))))
 
 ;;マップ設定
-(defun set-map (map p moto)
+(defun set-map (map pt moto)
+  (setf (donjon-tate map) 11
+        (donjon-yoko map) 11)
   (loop for i from 0 below (donjon-tate map) do
     (loop for j from 0 below (donjon-yoko map) do
       (if (= (aref moto i j) 1)
-	  (setf (player-posx p) j
-		(player-posy p) i))
+	  (setf (party-posx pt) j
+		(party-posy pt) i))
       (setf (aref (donjon-map map) i j) (aref moto i j)))))
 
 (defun maze (map pt)
@@ -146,7 +148,7 @@
 	  (donjon-path map) nil)
     (cond
       ((= (party-map pt) 100) ;; 100階は固定マップ
-       (set-map map p *map100*))
+       (set-map map pt *map100*))
       (t
        ;;奇数座標を初期位置にする
        (setf x (random (floor (donjon-yoko map) 2))

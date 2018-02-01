@@ -84,7 +84,8 @@
 (defmethod monster-show ((m ha2ne2))
   (format nil "ボス：ハツネツエリア"))
 (defmethod monster-attack ((m ha2ne2) players)
-  (let ((x (+ 3 (randval (+ (player-level p) (ha2ne2-h-atk m))))))
+  (let* ((p (nth (random (length players)) players))
+         (x (+ 3 (randval (+ (player-level p) (ha2ne2-h-atk m))))))
     (case (random 3)
       (0
        (scr-format "「ハツネツの攻撃。~dのダメージをくらった。」~%" x)
@@ -108,7 +109,8 @@
 (defmethod monster-show ((m boss))
   (format nil "ボス：もげぞう"))
 (defmethod monster-attack ((m boss) players)
-  (let ((x (+ 5 (randval (+ (player-level p) (boss-boss-atk m))))))
+  (let* ((p (nth (random (length players)) players))
+         (x (+ 5 (randval (+ (player-level p) (boss-boss-atk m))))))
     (case (random 5)
       ((0 3)
        (scr-format "「もげぞうの攻撃。~dのダメージをくらった。」~%" x)
@@ -153,7 +155,7 @@
 
 (defmethod monster-hit2 (pt (p player) (m yote1) x)
   (decf (monster-health m))
-  (setf (monster-damage m) (format nil "1 のダメージを与えた！"))
+  (incf (monster-damage m))
   (if (monster-dead m)
       (progn (incf (player-exp p) 100)
 	     (nakama? pt *yote1-name* 5)

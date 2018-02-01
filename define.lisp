@@ -3,11 +3,6 @@
 (defparameter *yoko* 11)
 (defparameter *monsters* nil)
 (defparameter *monster-builders* nil)
-(defparameter *attack* '("突く" "ダブルスウィング" "薙ぎ払う" "待機" "回復薬"))
-(defparameter *orc-atk* '("殴る" "ぶん殴る" "待機" "回復薬"))
-(defparameter *slime-atk* '("ビンタ" "ベトベト液" "待機" "回復薬"))
-(defparameter *hydra-atk* '("かじる" "暴れる" "待機" "回復薬"))
-(defparameter *brigand-atk* '("叩く" "鞭アタック" "待機" "回復薬"))
 
 (defparameter *battle?* nil)
 (defparameter *monster-num* 10)
