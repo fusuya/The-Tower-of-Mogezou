@@ -78,7 +78,7 @@
        (update-map map pt 0 1))
       ((a h 4)
        (update-map map pt 0 -1))
-      (q (select-heal pt 0))
+      (q (select-heal pt 0 0 0))
        (i
         (show-item pt))
       (r (setf *end* 2))
@@ -86,7 +86,7 @@
        (scr-format "w,a,s,d,q,rの中から選んでください！~%")))
     (encount-enemy pt map) ;;敵との当たり判定
     (enemy-move map)       ;;敵移動
-    (show-map map pt)      ;;マップ表示
+    ;;(show-map map pt)      ;;マップ表示
     (encount-enemy pt map) ;;敵との当たり判定
     (map-move map pt)))
 
