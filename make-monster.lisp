@@ -2,7 +2,7 @@
 ;;モンスターデータ作成用
 (defstruct monster
   (health (randval (+ 10 *monster-level*)))
-  (agi    (randval (+ 10 *monster-level*)))
+  (agi    (+ 20 (randval (+ 10 *monster-level*))))
   (damage  0)
   (agi-damage 0)
   (str-damage 0))
@@ -31,7 +31,7 @@
 
 ;;----------仲間になるか？-----------------------------------------------------
 (defun nakama? (pt name-list type)
-  (if (and (null (party-new-nakama pt)) (= 0 (random 1)))
+  (if (and (null (party-new-nakama pt)) (= 0 (random 20)))
       (let ((level 0))
 	(dolist (p (party-players pt))
 	  (if (> (player-level p) level)
@@ -39,6 +39,9 @@
 	(let ((hp (+ 30 (random level)))
 	      (str (+ 30 (random level)))
 	      (agi (+ 30 (random level))))
+	  (if (= type 5) ;;メテルヨテイチなら
+	      (progn (incf agi 30)
+		     (setf hp (+ 5 (random (+ 10 level))))))
 	  (setf (party-new-nakama pt)
 		(make-player :hp hp :maxhp hp
 			     :str str :maxstr str
@@ -80,7 +83,7 @@
 
 (defmethod monster-attack (m players))
 ;;--------中ボス------------------------------------------------------------------------
-(defstruct (ha2ne2 (:include monster)) (h-atk 8))
+(defstruct (ha2ne2 (:include monster)) (h-atk 12))
 (defmethod monster-show ((m ha2ne2))
   (format nil "ボス：ハツネツエリア"))
 (defmethod monster-attack ((m ha2ne2) players)
@@ -88,24 +91,26 @@
          (x (+ 3 (randval (+ (player-level p) (ha2ne2-h-atk m))))))
     (case (random 3)
       (0
-       (scr-format "「ハツネツの攻撃。~dのダメージをくらった。」~%" x)
-       (decf (player-hp p) x))
+       (scr-format "「ハツネツの攻撃。~a は ~dのダメージをくらった。」~%" (player-name p) x)
+       (decf (player-hp p) x)
+       (player-dead-message p))
       (1
        (let ((dame-str (- (player-str p) x)))
 	 (if (= (player-str p) 0)
-	     (progn (scr-format "「ネコPパンチ。HPが~d下がった。」~%" x)
-		    (decf (player-hp p) x))
+	     (progn (scr-format "「ネコPパンチ。~aのHPが~d下がった。」~%" (player-name p) x)
+		    (decf (player-hp p) x)
+		    (player-dead-message p))
 	     (if (>= dame-str 0)
-		 (progn (scr-format "「ネコPパンチ。力が~d下がった。」~%" x)
+		 (progn (scr-format "「ネコPパンチ。~aの力が~d下がった。」~%" (player-name p) x)
 			(decf (player-str p) x))
-		 (progn (scr-format "「ネコPパンチ。力が~d下がった。」~%" (player-str p))
+		 (progn (scr-format "「ネコPパンチ。~aの力が~d下がった。」~%" (player-name p) (player-str p))
 			(setf (player-str p) 0))))))
       (2
        (scr-format "「ハツネツが料理してご飯を食べている。ハツネツのHPが~d回復した！」~%" x)
        (incf (monster-health m) x)))))
 
 ;;--------ボス------------------------------------------------------------------------
-(defstruct (boss (:include monster)) (boss-atk 10))
+(defstruct (boss (:include monster)) (boss-atk 15))
 (defmethod monster-show ((m boss))
   (format nil "ボス：もげぞう"))
 (defmethod monster-attack ((m boss) players)
@@ -113,29 +118,26 @@
          (x (+ 5 (randval (+ (player-level p) (boss-boss-atk m))))))
     (case (random 5)
       ((0 3)
-       (scr-format "「もげぞうの攻撃。~dのダメージをくらった。」~%" x)
-       (decf (player-hp p) x))
+       (scr-format "「もげぞうの攻撃。~a は~dのダメージをくらった。」~%" (player-name p)  x)
+       (decf (player-hp p) x)
+       (player-dead-message p))
       ((1 4)
        (let ((dame-agi (- (player-agi p) x)))
 	 (if (= (player-agi p) 0)
-	     (progn (scr-format "「もげぞうの攻撃。~dのダメージをくらった。」~%" x)
-		    (decf (player-hp p) x))
+	     (progn (scr-format "「もげぞうの攻撃。~a は~dのダメージをくらった。」~%" (player-name p) x)
+		    (decf (player-hp p) x)
+		    (player-dead-message p))
 	     (if (>= dame-agi 0)
-		 (progn (scr-format "「もげぞうの不思議な踊り。素早さが~d下がった。」~%" x)
+		 (progn (scr-format "「もげぞうの不思議な踊り。~a の素早さが~d下がった。」~%" (player-name p) x)
 			(decf (player-agi p) x))
-		 (progn (scr-format "「もげぞうの不思議な踊り。素早さが~d下がった。」~%" (player-agi p))
+		 (progn (scr-format "「もげぞうの不思議な踊り。~a の素早さが~d下がった。」~%" (player-name p)
+				    (player-agi p))
 			(setf (player-agi p) 0))))))
       (2
-       (let ((dame-agi (- (player-agi p) x))
-	     (dame-str (- (player-str p) x)))
-	 (scr-format "「もげぞうのなんかすごい攻撃！すべてのステータスが~d下がった！」~%" x)
-	 (decf (player-hp p) x)
-	 (if (>= dame-agi 0)
-	     (decf (player-agi p) x)
-	     (setf (player-agi p) 0))
-	 (if (>= dame-str 0)
-	     (decf (player-str p) x)
-	     (setf (player-str p) 0)))))))
+       (scr-format "「もげぞうのなんかすごい攻撃！全員に~dのダメージ！」~%" x)
+       (dolist (pl players)
+	 (decf (player-hp pl) x)
+	 (player-dead-message p))))))
 
 ;;-------------------メタルヨテイチ--------------------------------------------------
 (defstruct (yote1 (:include monster))
@@ -150,8 +152,10 @@
 	 (p (nth (random (length players)) players)))
     (case (random 2)
       (0 (scr-format "「メタルヨテイチは何もしていない。」~%"))
-      (1 (scr-format "「メタルヨテイチが突然殴り掛かってきた。~aは~dのダメージを受けた。」~%" (player-name p) atk)
-       (decf (player-hp p) atk)))))
+      (1
+       (scr-format "「メタルヨテイチが突然殴り掛かってきた。~a は~dのダメージを受けた。」~%" (player-name p) atk)
+       (decf (player-hp p) atk)
+       (player-dead-message p)))))
 
 (defmethod monster-hit2 (pt (p player) (m yote1) x)
   (decf (monster-health m))
@@ -181,7 +185,8 @@
 	(p (nth (random (length players)) players)))
     (scr-format (monster-show m))
     (scr-format "が棍棒で殴ってきて ~a は ~d のダメージをくらった。~%" (player-name p) x)
-    (decf (player-hp p) x)))
+    (decf (player-hp p) x)
+    (player-dead-message p)))
 
 
 
@@ -210,7 +215,8 @@
     (scr-format (monster-show m))
     (scr-format "の首が一本生えてきた！~%")
     (incf (monster-health m))
-    (decf (player-hp p) x)))
+    (decf (player-hp p) x)
+    (player-dead-message p)))
 
 
 ;;-------------------スライム------------------------------
@@ -233,15 +239,16 @@
        (let ((dame-agi (- (player-agi p) x)))
 	 (if (>= dame-agi 0)
 	     (progn (scr-format (monster-show m))
-		    (scr-format "は足に絡みついてきて~aの素早さが ~d 下がった！~%" (player-name p) x)
+		    (scr-format "は足に絡みついてきて ~a の素早さが ~d 下がった！~%" (player-name p) x)
 		    (decf (player-agi p) x))
 	     (progn (scr-format (monster-show m))
-		    (scr-format "は足に絡みついてきて~aの素早さが ~d 下がった！~%"
+		    (scr-format "は足に絡みついてきて ~a の素早さが ~d 下がった！~%"
 				(player-name p) (player-agi p))
 		    (setf (player-agi p) 0)))))
       (t (scr-format (monster-show m))
 	 (scr-format "が何か液体を吐きかけてきて ~aは ~d ダメージくらった！~%" (player-name p) x)
-	 (decf (player-hp p) x)))))
+	 (decf (player-hp p) x)
+	 (player-dead-message p)))))
 
 ;;-------------------ブリガンド------------------------------
 (defstruct (brigand (:include monster)) (atk (+ 2 (random *monster-level*))))
@@ -262,7 +269,8 @@
     (scr-format (monster-show m))
     (cond ((= x (player-hp p))
 	   (scr-format "のスリングショットの攻撃で~aは ~d ダメージくらった！~%" (player-name p) damage)
-	   (decf (player-hp p) damage))
+	   (decf (player-hp p) damage)
+	   (player-dead-message p))
 	  ((= x (player-agi p))
 	   (scr-format "は鞭で~aの足を攻撃してきた！素早さが ~d 減った！~%" (player-name p) damage)
 	   (decf (player-agi p) damage))
