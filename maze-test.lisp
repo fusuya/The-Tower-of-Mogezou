@@ -116,8 +116,9 @@
 	      (aref (donjon-map map) (car boss) (cadr boss)) boss-num))))
 
 (defun set-enemies (map)
-  (let ((len (length (donjon-path map))))
-    (loop for i from 0 to (+ 2 (random 4)) do
+  (let ((len (length (donjon-path map)))
+	(enemy-num (+ 2 (random 6))))
+    (loop for i from 0 to enemy-num do
       (push (nth (random len) (donjon-path map)) (donjon-enemies map)))))
 
 ;;マップ設定
@@ -167,7 +168,9 @@
        (setf (aref (donjon-map map) starty startx) 1) ;;主人公の位置
        (setf (party-posy pt) starty
 	     (party-posx pt) startx) ;;初期位置
-       (set-enemies map)
+       ;;パーティーの位置に敵を配置しないようにする
+       (setf (donjon-path map) (remove (list (party-posx pt) (party-posy pt)) (donjon-path map) :test #'equal))
+       (set-enemies map) ;;敵を配置
        (cond
 	 ((= (party-map pt) 50)
 	  (set-boss-kaidan map 7))
