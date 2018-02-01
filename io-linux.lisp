@@ -81,7 +81,9 @@
       (q (select-heal pt 0 0 0))
        (i
         (show-item pt))
-      (r (setf *end* 2))
+      (r
+       (setf *end* 2)
+       (return-from map-move))
       (otherwise
        (scr-format "w,a,s,d,q,rの中から選んでください！~%")))
     (encount-enemy pt map) ;;敵との当たり判定
