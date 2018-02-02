@@ -265,7 +265,7 @@
 (defmethod monster-attack ((m brigand) players)
   (let* ((p (nth (random (length players)) players))
 	 (x (max (player-hp p) (player-agi p) (player-str p)))
-	 (damage (brigand-atk m))	)
+	 (damage (brigand-atk m)))
     (scr-format (monster-show m))
     (cond ((= x (player-hp p))
 	   (scr-format "のスリングショットの攻撃で~aは ~d ダメージくらった！~%" (player-name p) damage)
@@ -278,6 +278,39 @@
 	   (scr-format "は鞭で~aの腕を攻撃してきた！力が ~d 減った！~%" (player-name p) damage)
 	   (decf (player-str p) damage)))))
 
+;;-------------------ドラゴン------------------------------------------------------------------
+(defstruct (dragon (:include monster)) (atk (+ 4 (random *monster-level*))))
+(push #'make-dragon *monster-builders*)
+
+(defmethod monster-show ((m dragon))
+  (let ((x (dragon-atk m)))
+    (cond
+      ((<= 1 x 3) (format nil "尻尾の短いドラゴン"))
+      ((<= 4 x 6) (format nil "羽の生えたドラゴン"))
+      ((<= 7 x 9) (format nil "角の生えたドラゴン"))
+      (t (format nil "レッドドラゴン")))))
+
+(defmethod monster-attack ((m dragon) players)
+  (scr-format (monster-show m))
+  (case (random 3)
+    (0
+     (let ((x (randval (dragon-atk m)))
+	   (p (nth (random (length players)) players)))
+       (scr-format "のかみつきで ~aは ~d ダメージくらった！~%" (player-name p) x)
+       (decf (player-hp p) x)
+       (player-dead-message p)))
+    (1
+     (dolist (p players)
+       (let ((x (randval (floor (dragon-atk m) 3))))
+	 (scr-format "のファイアブレスで ~aは ~d ダメージくらった！~%" (player-name p) x)
+	 (decf (player-hp p) x)
+	 (player-dead-message p))))
+    (2
+     (let ((x (randval (floor (dragon-atk m) 2)))
+	   (p (nth (random (length players)) players)))
+       (scr-format "の咆哮で ~aはビビって力が ~d 減った！~%" (player-name p) x)
+       (decf (player-str p) x)))))
+;;----------------------------------------------------------------------------------------------
 
 ;;モンスターのSTRにダメージ
 (defun monster-str-hit (m x)
