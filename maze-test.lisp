@@ -115,9 +115,10 @@
 	(setf (aref (donjon-map map) (car kaidan) (cadr kaidan)) 2
 	      (aref (donjon-map map) (car boss) (cadr boss)) boss-num))))
 
+;;敵を配置する
 (defun set-enemies (map)
   (let ((len (length (donjon-path map)))
-	(enemy-num (+ 2 (random 6))))
+	(enemy-num (+ 3 (random 6))))
     (loop for i from 0 to enemy-num do
       (push (nth (random len) (donjon-path map)) (donjon-enemies map)))))
 
@@ -164,7 +165,7 @@
              (init-map (donjon-map map) (donjon-tate map) (donjon-yoko map))
              (setf (donjon-stop-list map) nil)
              (setf (aref (donjon-map map) starty startx) 0)
-             (recursion starty startx map))
+             (recursion starty startx map 0))
        (setf (aref (donjon-map map) starty startx) 1) ;;主人公の位置
        (setf (party-posy pt) starty
 	     (party-posx pt) startx) ;;初期位置
@@ -178,15 +179,4 @@
     ;;(d-map-map mapn)))
     ;;(test-show-map (d-map-map mapn))))
     
-(defun test-show-map (map)
-  (loop for i from 0 below (donjon-tate map) do
-    (loop for j from 0 below (donjon-yoko map) do
-      (princ (map-type (aref (donjon-map map) i j)))
-      
-      (if (= j (- (donjon-yoko map) 1))
-	  (case i
-	    (0 (format t " 主:プレイヤーの位置~%"))
-	    (2 (format t " 宝:宝箱~%"))
-	    (1 (format t " 下:下り階段~%"))
-	    (3 (format t " 薬:回復薬~%"))
-	    (otherwise (fresh-line)))))))
+
