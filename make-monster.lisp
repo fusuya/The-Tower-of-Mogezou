@@ -1,3 +1,12 @@
+;;プレイヤーの生死判定
+(defun player-dead (p)
+  (<= (player-hp p) 0))
+
+;;味方死んだ時のメッセージ
+(defun player-dead-message (p)
+  (if (player-dead p)
+      (scr-format "~a は死んでしまった！~%" (player-name p))))
+
 ;;-----------------------------------------------------------------------
 ;;モンスターデータ作成用
 (defstruct monster
@@ -49,6 +58,13 @@
 			     :level level :level-exp (+ 100 (* 10 (1- level)))
 			     :name (nth (random (length name-list)) name-list) :type type))))))
 ;;-----------------------------------------------------------------
+;;敵から取得できる経験値
+(defparameter *orc-exp*     5)
+(defparameter *slime-exp*   6)
+(defparameter *hydra-exp**  7)
+(defparameter *brigand-exp* 8)
+(defparameter *dragon-exp* 10)
+(defparameter *ha2ne2-exp* 99)
 ;;モンスターの受けたダメージ処理
 (defmethod monster-hit2 (pt p m x)
   (decf (monster-health m) x)
@@ -58,21 +74,23 @@
       (case (type-of m)
         (ha2ne2
 	 (ha2ne2-drop pt)
-	 (incf (player-exp p) 99))
+	 (incf (player-exp p) *ha2ne2-exp*))
 	(orc
 	 (orc-drop pt)
 	 (nakama? pt *orc-name* 1)
-	 (incf (player-exp p) 2))
+	 (incf (player-exp p) *orc-exp*))
 	(slime-mold
 	 (nakama? pt *slime-name* 2)
 	 (slime-drop pt)
-	 (incf (player-exp p) 3))
+	 (incf (player-exp p) *slime-exp*))
 	(hydra
 	 (nakama? pt *hydra-name* 3)
-	 (incf (player-exp p) 4))
+	 (incf (player-exp p) *hydra-exp**))
+	(dragon
+	 (incf (player-exp p) *dragon-exp*))
 	(brigand
 	 (nakama? pt *brigand-name* 4)
-	 (incf (player-exp p) 5)))))
+	 (incf (player-exp p) *brigand-exp*)))))
 
 ;;モンスターにAGIのダメージ
 (defun monster-agi-hit (m x)
@@ -291,9 +309,9 @@
       (t (format nil "レッドドラゴン")))))
 
 (defmethod monster-attack ((m dragon) players)
-  (scr-format (monster-show m))
   (case (random 3)
     (0
+     (scr-format (monster-show m))
      (let ((x (randval (dragon-atk m)))
 	   (p (nth (random (length players)) players)))
        (scr-format "のかみつきで ~aは ~d ダメージくらった！~%" (player-name p) x)
@@ -301,11 +319,13 @@
        (player-dead-message p)))
     (1
      (dolist (p players)
+       (scr-format (monster-show m))
        (let ((x (randval (floor (dragon-atk m) 3))))
 	 (scr-format "のファイアブレスで ~aは ~d ダメージくらった！~%" (player-name p) x)
 	 (decf (player-hp p) x)
 	 (player-dead-message p))))
     (2
+     (scr-format (monster-show m))
      (let ((x (randval (floor (dragon-atk m) 2)))
 	   (p (nth (random (length players)) players)))
        (scr-format "の咆哮で ~aはビビって力が ~d 減った！~%" (player-name p) x)
